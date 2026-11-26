@@ -1,0 +1,31 @@
+export function HMorixLogo({ size = 36, subtitle = 'TEAM WORKSPACE' }: { size?: number; subtitle?: string }) {
+  return (
+    <div className="inline-flex items-center gap-3 select-none group">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 48 48" width={size} height={size} fill="none"
+        className="transition-transform duration-300 group-hover:scale-105" style={{ filter: 'drop-shadow(0 0 8px rgba(200,255,0,0.4))' }}>
+        <defs>
+          <linearGradient id="ws-sheen" x1="0%" y1="0%" x2="100%" y2="100%">
+            <stop offset="0%" stopColor="#FFFFFF" stopOpacity="0.18"/>
+            <stop offset="100%" stopColor="#FFFFFF" stopOpacity="0"/>
+          </linearGradient>
+        </defs>
+        <polygon points="24,3.06 42.14,13.53 42.14,34.47 24,44.94 5.86,34.47 5.86,13.53" fill="#0D0D0D" stroke="#C8FF00" strokeWidth="1.5"/>
+        <polygon points="24,4.5 40.8,14.2 40.8,33.8 24,43.5 7.2,33.8 7.2,14.2" fill="url(#ws-sheen)"/>
+        <line x1="24" y1="3.06" x2="24" y2="17.7" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square"/>
+        <line x1="24" y1="29.46" x2="24" y2="44.94" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square"/>
+        <line x1="10.78" y1="23.72" x2="37.22" y2="23.72" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square"/>
+        <path d="M 10.78 23.72 L 10.78 16.3 L 18.06 12.1 L 18.06 20.11 L 20.3 20.11 C 22.32 20.11 23.86 19.38 24 17.7" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square" fill="none"/>
+        <path d="M 37.22 23.72 L 37.22 16.3 L 29.94 12.1 L 29.94 20.11 L 27.7 20.11 C 25.68 20.11 24.14 19.38 24 17.7" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square" fill="none"/>
+        <path d="M 15.18 18.46 L 15.18 35.06 L 18.06 36.74 L 18.06 28.06 L 20.3 28.06 C 22.32 28.06 23.86 28.48 24 29.46" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square" fill="none"/>
+        <path d="M 32.82 18.46 L 32.82 35.06 L 29.94 36.74 L 29.94 28.06 L 27.7 28.06 C 25.68 28.06 24.14 28.48 24 29.46" stroke="#C8FF00" strokeWidth="1.5" strokeLinecap="square" fill="none"/>
+      </svg>
+      <div className="leading-tight">
+        <div className="font-display font-bold tracking-tight text-cream text-lg flex items-center gap-1.5">
+          HMorix
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-lime/15 text-lime border border-lime/30">TEAM</span>
+        </div>
+        <div className="font-mono text-[10px] tracking-[0.18em] text-cream/50 uppercase">{subtitle}</div>
+      </div>
+    </div>
+  );
+}

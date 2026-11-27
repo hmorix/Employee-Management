@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Award, CheckCircle2, ChevronRight, Clock, Kanban, Users } from 'lucide-react';
-import { motion } from 'framer-motion';
 import { supabase, type Task } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
@@ -16,18 +15,27 @@ export function DashboardPage() {
     if (!profile) return;
     const today = new Date().toISOString().slice(0, 10);
 
-    supabase.from('tasks').select('*').eq('assigned_to', profile.id).neq('status', 'done')
-      .order('priority', { ascending: false }).limit(5)
-      .then(({ data }) => setMyTasks((data as Task[]) || []));
+    const load = async () => {
+      try {
+        const { data: td } = await supabase.from('tasks').select('*').eq('assigned_to', profile.id).neq('status', 'done')
+          .order('priority', { ascending: false }).limit(5);
+        setMyTasks((td as Task[]) || []);
+      } catch { /* silent */ }
 
-    supabase.from('attendance_logs').select('punch_in, punch_out, total_minutes')
-      .eq('user_id', profile.id).eq('work_date', today).maybeSingle()
-      .then(({ data }) => setTodayAttendance(data as typeof todayAttendance));
+      try {
+        const { data: att } = await supabase.from('attendance_logs').select('punch_in, punch_out, total_minutes')
+          .eq('user_id', profile.id).eq('work_date', today).maybeSingle();
+        setTodayAttendance(att as typeof todayAttendance);
+      } catch { /* silent */ }
 
-    if (profile.team_id) {
-      supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('team_id', profile.team_id)
-        .then(({ count }) => setTeamCount(count || 0));
-    }
+      if (profile.team_id) {
+        try {
+          const { count } = await supabase.from('profiles').select('id', { count: 'exact', head: true }).eq('team_id', profile.team_id);
+          setTeamCount(count || 0);
+        } catch { /* silent */ }
+      }
+    };
+    load();
   }, [profile]);
 
   const punchIn = async () => {
@@ -64,7 +72,7 @@ export function DashboardPage() {
 
   if (loading) {
     return (
-      <div className="min-h-[60vh] flex items-center justify-center text-cream/60 font-mono text-sm">
+      <div className="min-h-[60vh] flex items-center justify-center font-mono text-sm" style={{ color: 'rgba(234,232,227,0.6)' }}>
         Loading your HMorix workspace...
       </div>
     );
@@ -73,19 +81,22 @@ export function DashboardPage() {
   if (!profile) {
     return (
       <div className="max-w-xl mx-auto px-4 py-16">
-        <div className="hm-card p-6 sm:p-8 space-y-4 border-red-500/30">
-          <p className="font-mono text-xs text-lime uppercase">Profile Setup Required</p>
-          <h1 className="font-display text-2xl font-bold text-cream">Unable to load your workspace profile</h1>
-          <p className="text-sm text-cream/70">
-            Signed in as <code className="text-lime">{user?.email}</code>, but the <code className="text-lime">profiles</code> table returned no record.
+        <div className="hm-card p-6 sm:p-8 space-y-4" style={{ borderColor: 'rgba(239,68,68,0.3)' }}>
+          <p className="font-mono text-xs uppercase" style={{ color: '#C8FF00' }}>Profile Setup Required</p>
+          <h1 className="font-display text-2xl font-bold" style={{ color: '#EAE8E3' }}>Unable to load your workspace profile</h1>
+          <p className="text-sm" style={{ color: 'rgba(234,232,227,0.7)' }}>
+            Signed in as <code style={{ color: '#C8FF00' }}>{user?.email}</code>, but the <code style={{ color: '#C8FF00' }}>profiles</code> table returned no record.
           </p>
           {profileError && (
-            <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-mono">
+            <div className="p-3 rounded-lg font-mono text-xs" style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', color: '#fca5a5' }}>
               {profileError}
             </div>
           )}
-          <p className="text-xs text-cream/55">
-            Make sure you have run <code>supabase/schema.sql</code> in your Supabase SQL Editor.
+          <p className="text-xs" style={{ color: 'rgba(234,232,227,0.55)' }}>
+            Make sure you have run <code>supabase/schema.sql</code> in your Supabase SQL Editor at{' '}
+            <a href="https://supabase.com/dashboard/project/ouigbkolkigqtwuhmkfm/sql" target="_blank" rel="noreferrer" style={{ color: '#C8FF00' }}>
+              supabase.com/dashboard
+            </a>
           </p>
           <div className="flex flex-wrap gap-3 pt-2">
             <button onClick={() => refreshProfile()} className="hm-btn-primary">Retry</button>
@@ -96,21 +107,28 @@ export function DashboardPage() {
     );
   }
 
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? 'Morning' : hour < 18 ? 'Afternoon' : 'Evening';
+
   return (
     <div className="p-5 sm:p-8 max-w-6xl mx-auto space-y-8">
       {/* Welcome */}
-      <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="hm-card p-6 bg-gradient-to-br from-obsidian-2 via-obsidian-2 to-lime/5 border-lime/20">
+      <div className="hm-card p-6" style={{ background: 'linear-gradient(135deg, #141414 0%, #141414 70%, rgba(200,255,0,0.05) 100%)', borderColor: 'rgba(200,255,0,0.2)' }}>
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <p className="font-mono text-xs text-lime uppercase tracking-widest">Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 18 ? 'Afternoon' : 'Evening'}</p>
-            <h1 className="font-display text-2xl sm:text-3xl font-bold text-cream mt-1">{profile.full_name}</h1>
-            <p className="text-sm text-cream/65 mt-0.5">{profile.designation} · {profile.department} · <span className="text-lime font-mono">{profile.employee_code}</span></p>
+            <p className="font-mono text-xs uppercase tracking-widest" style={{ color: '#C8FF00' }}>Good {greeting}</p>
+            <h1 className="font-display text-2xl sm:text-3xl font-bold mt-1" style={{ color: '#EAE8E3' }}>{profile.full_name}</h1>
+            <p className="text-sm mt-0.5" style={{ color: 'rgba(234,232,227,0.65)' }}>
+              {profile.designation} · {profile.department} · <span className="font-mono" style={{ color: '#C8FF00' }}>{profile.employee_code}</span>
+            </p>
           </div>
           <div className="text-right">
-            <div className="font-mono text-xs text-cream/50">{new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</div>
+            <div className="font-mono text-xs" style={{ color: 'rgba(234,232,227,0.5)' }}>
+              {new Date().toLocaleDateString('en-IN', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}
+            </div>
           </div>
         </div>
-      </motion.div>
+      </div>
 
       {/* Stats Row */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
@@ -121,10 +139,10 @@ export function DashboardPage() {
           { icon: Award, label: 'Role', value: profile.role.replace('_', ' '), to: '/directory' },
         ].map((s) => (
           <Link key={s.label} to={s.to} className="hm-card hm-card-hover p-4 flex items-start gap-3">
-            <s.icon className="w-5 h-5 text-lime mt-0.5 shrink-0" />
+            <s.icon className="w-5 h-5 mt-0.5 shrink-0" style={{ color: '#C8FF00' }} />
             <div>
-              <div className="text-xs font-mono text-cream/50">{s.label}</div>
-              <div className="font-display text-lg font-bold text-cream capitalize">{s.value}</div>
+              <div className="text-xs font-mono" style={{ color: 'rgba(234,232,227,0.5)' }}>{s.label}</div>
+              <div className="font-display text-lg font-bold capitalize" style={{ color: '#EAE8E3' }}>{s.value}</div>
             </div>
           </Link>
         ))}
@@ -133,21 +151,23 @@ export function DashboardPage() {
       <div className="grid grid-cols-1 md:grid-cols-5 gap-6">
         {/* Attendance Card */}
         <div className="md:col-span-2 hm-card p-5 space-y-4">
-          <h2 className="font-display font-semibold text-cream flex items-center gap-2"><Clock className="w-4 h-4 text-lime" /> Attendance</h2>
+          <h2 className="font-display font-semibold flex items-center gap-2" style={{ color: '#EAE8E3' }}>
+            <Clock className="w-4 h-4" style={{ color: '#C8FF00' }} /> Attendance
+          </h2>
           {!todayAttendance ? (
             <button onClick={punchIn} disabled={punchLoading} className="hm-btn-primary w-full">
               {punchLoading ? 'Logging...' : '🟢 Punch In for Today'}
             </button>
           ) : (
             <div className="space-y-3">
-              <div className="p-3 rounded-xl bg-lime/10 border border-lime/30 text-sm">
-                <div className="font-mono text-xs text-lime mb-0.5">PUNCH IN</div>
-                <div className="font-bold text-cream">{new Date(todayAttendance.punch_in).toLocaleTimeString()}</div>
+              <div className="p-3 rounded-xl text-sm" style={{ background: 'rgba(200,255,0,0.1)', border: '1px solid rgba(200,255,0,0.3)' }}>
+                <div className="font-mono text-xs mb-0.5" style={{ color: '#C8FF00' }}>PUNCH IN</div>
+                <div className="font-bold" style={{ color: '#EAE8E3' }}>{new Date(todayAttendance.punch_in).toLocaleTimeString()}</div>
               </div>
               {todayAttendance.punch_out ? (
-                <div className="p-3 rounded-xl bg-obsidian-3 border border-cream/15 text-sm">
-                  <div className="font-mono text-xs text-cream/50 mb-0.5">SESSION</div>
-                  <div className="font-bold text-cream">{Math.floor(todayAttendance.total_minutes / 60)}h {todayAttendance.total_minutes % 60}m logged</div>
+                <div className="p-3 rounded-xl text-sm" style={{ background: '#1C1C1C', border: '1px solid rgba(234,232,227,0.15)' }}>
+                  <div className="font-mono text-xs mb-0.5" style={{ color: 'rgba(234,232,227,0.5)' }}>SESSION</div>
+                  <div className="font-bold" style={{ color: '#EAE8E3' }}>{Math.floor(todayAttendance.total_minutes / 60)}h {todayAttendance.total_minutes % 60}m logged</div>
                 </div>
               ) : (
                 <button onClick={punchOut} disabled={punchLoading} className="hm-btn-secondary w-full">
@@ -161,25 +181,27 @@ export function DashboardPage() {
         {/* My Tasks */}
         <div className="md:col-span-3 hm-card p-5 space-y-3">
           <div className="flex items-center justify-between">
-            <h2 className="font-display font-semibold text-cream flex items-center gap-2"><Kanban className="w-4 h-4 text-lime" /> My Active Tasks</h2>
-            <Link to="/tasks" className="text-xs font-mono text-lime hover:underline flex items-center gap-1">
+            <h2 className="font-display font-semibold flex items-center gap-2" style={{ color: '#EAE8E3' }}>
+              <Kanban className="w-4 h-4" style={{ color: '#C8FF00' }} /> My Active Tasks
+            </h2>
+            <Link to="/tasks" className="text-xs font-mono flex items-center gap-1 hover:underline" style={{ color: '#C8FF00' }}>
               All Tasks <ChevronRight className="w-3.5 h-3.5" />
             </Link>
           </div>
           {myTasks.length === 0 ? (
-            <p className="text-sm text-cream/60 py-4 text-center">No open tasks assigned. 🎉</p>
+            <p className="text-sm py-4 text-center" style={{ color: 'rgba(234,232,227,0.6)' }}>No open tasks assigned. 🎉</p>
           ) : (
             <div className="space-y-2.5">
               {myTasks.map((task) => (
-                <div key={task.id} className="flex items-start gap-3 p-3 rounded-xl bg-obsidian-3 border border-cream/10">
+                <div key={task.id} className="flex items-start gap-3 p-3 rounded-xl" style={{ background: '#1C1C1C', border: '1px solid rgba(234,232,227,0.1)' }}>
                   <span className={`mt-0.5 px-2 py-0.5 rounded text-[10px] font-mono border shrink-0 ${priorityColor[task.priority]}`}>
                     {task.priority}
                   </span>
                   <div className="flex-1 min-w-0">
-                    <div className="text-sm font-medium text-cream truncate">{task.title}</div>
-                    <div className="text-xs text-cream/55 mt-0.5 font-mono">{task.task_code} · Due: {task.due_date || '—'}</div>
+                    <div className="text-sm font-medium truncate" style={{ color: '#EAE8E3' }}>{task.title}</div>
+                    <div className="text-xs mt-0.5 font-mono" style={{ color: 'rgba(234,232,227,0.55)' }}>{task.task_code} · Due: {task.due_date || '—'}</div>
                   </div>
-                  <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-obsidian-2 text-cream/60 capitalize shrink-0">
+                  <span className="text-[10px] font-mono px-2 py-0.5 rounded capitalize shrink-0" style={{ background: '#141414', color: 'rgba(234,232,227,0.6)' }}>
                     {task.status.replace('_', ' ')}
                   </span>
                 </div>
@@ -192,13 +214,13 @@ export function DashboardPage() {
       {isLeader && (
         <Link to="/leader" className="hm-card hm-card-hover p-5 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Users className="w-5 h-5 text-lime" />
+            <Users className="w-5 h-5" style={{ color: '#C8FF00' }} />
             <div>
-              <div className="font-display font-semibold text-cream">Team Leader Board</div>
-              <div className="text-xs text-cream/60">Assign tasks, manage sprints, track team activity</div>
+              <div className="font-display font-semibold" style={{ color: '#EAE8E3' }}>Team Leader Board</div>
+              <div className="text-xs" style={{ color: 'rgba(234,232,227,0.6)' }}>Assign tasks, manage sprints, track team activity</div>
             </div>
           </div>
-          <ChevronRight className="w-5 h-5 text-lime" />
+          <ChevronRight className="w-5 h-5" style={{ color: '#C8FF00' }} />
         </Link>
       )}
     </div>

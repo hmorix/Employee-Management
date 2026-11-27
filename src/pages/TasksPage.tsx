@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+
 import { CheckCircle2, Loader2, MessageSquare, Paperclip, Plus, Upload, X } from 'lucide-react';
 import { supabase, uploadFile, type Task, type TaskComment } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -101,10 +101,9 @@ export function TasksPage() {
 
               <div className="space-y-3">
                 {byStatus(status).map((task) => (
-                  <motion.button
+                  <button
                     key={task.id}
                     onClick={() => openTask(task)}
-                    whileHover={{ scale: 1.01 }}
                     className="w-full text-left p-4 rounded-xl bg-obsidian-3 border border-cream/10 hover:border-lime/40 transition"
                   >
                     <div className="flex items-start justify-between gap-2 mb-2">
@@ -118,7 +117,7 @@ export function TasksPage() {
                     {task.estimated_hours > 0 && (
                       <div className="text-[11px] font-mono text-cream/50">Est: {task.estimated_hours}h</div>
                     )}
-                  </motion.button>
+                  </button>
                 ))}
               </div>
             </div>
@@ -129,9 +128,7 @@ export function TasksPage() {
       {/* Task Detail Panel */}
       {selected && (
         <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex justify-end">
-          <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }}
-            transition={{ type: 'spring', damping: 30 }}
-            className="w-full max-w-lg bg-obsidian-2 border-l border-cream/10 h-full overflow-y-auto flex flex-col">
+          <div className="w-full max-w-lg bg-obsidian-2 border-l border-cream/10 h-full overflow-y-auto flex flex-col">
 
             <div className="sticky top-0 bg-obsidian-2 border-b border-cream/10 p-5 flex items-start gap-3">
               <div className="flex-1 min-w-0">
@@ -250,7 +247,7 @@ export function TasksPage() {
                 {commentFile && <div className="text-xs text-cream/50 mt-1 font-mono">{commentFile.name}</div>}
               </div>
             </div>
-          </motion.div>
+          </div>
         </div>
       )}
     </div>

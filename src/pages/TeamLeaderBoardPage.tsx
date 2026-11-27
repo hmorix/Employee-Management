@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { motion } from 'framer-motion';
+
 import { CheckCircle2, Loader2, Plus, Trash2, Users, X } from 'lucide-react';
 import { supabase, type Profile, type Task, type Team } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
@@ -177,7 +177,7 @@ export function TeamLeaderBoardPage() {
                 {tasks.length === 0 ? (
                   <tr><td colSpan={7} className="p-6 text-cream/60 text-sm">No tasks assigned yet.</td></tr>
                 ) : tasks.map((task) => (
-                  <motion.tr key={task.id} initial={{ opacity: 0 }} animate={{ opacity: 1 }}
+                  <tr key={task.id}
                     className="border-b border-cream/5 hover:bg-obsidian-3 transition">
                     <td className="p-3 font-mono text-xs text-lime">{task.task_code}</td>
                     <td className="p-3 font-semibold text-cream max-w-xs truncate">{task.title}</td>
@@ -205,7 +205,7 @@ export function TeamLeaderBoardPage() {
                         <Trash2 className="w-3.5 h-3.5" />
                       </button>
                     </td>
-                  </motion.tr>
+                  </tr>
                 ))}
               </tbody>
             </table>

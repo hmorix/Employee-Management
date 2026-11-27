@@ -6,7 +6,7 @@ import { supabase, type Task } from '../lib/supabase';
 import { useAuth } from '../context/AuthContext';
 
 export function DashboardPage() {
-  const { profile, isLeader } = useAuth();
+  const { user, profile, profileError, loading, isLeader, refreshProfile, signOut } = useAuth();
   const [myTasks, setMyTasks] = useState<Task[]>([]);
   const [todayAttendance, setTodayAttendance] = useState<{ punch_in: string; punch_out: string | null; total_minutes: number } | null>(null);
   const [punchLoading, setPunchLoading] = useState(false);
@@ -62,7 +62,39 @@ export function DashboardPage() {
     low: 'bg-blue-500/15 text-blue-300 border-blue-500/40',
   };
 
-  if (!profile) return null;
+  if (loading) {
+    return (
+      <div className="min-h-[60vh] flex items-center justify-center text-cream/60 font-mono text-sm">
+        Loading your HMorix workspace...
+      </div>
+    );
+  }
+
+  if (!profile) {
+    return (
+      <div className="max-w-xl mx-auto px-4 py-16">
+        <div className="hm-card p-6 sm:p-8 space-y-4 border-red-500/30">
+          <p className="font-mono text-xs text-lime uppercase">Profile Setup Required</p>
+          <h1 className="font-display text-2xl font-bold text-cream">Unable to load your workspace profile</h1>
+          <p className="text-sm text-cream/70">
+            Signed in as <code className="text-lime">{user?.email}</code>, but the <code className="text-lime">profiles</code> table returned no record.
+          </p>
+          {profileError && (
+            <div className="p-3 rounded-lg bg-red-500/15 border border-red-500/40 text-red-300 text-xs font-mono">
+              {profileError}
+            </div>
+          )}
+          <p className="text-xs text-cream/55">
+            Make sure you have run <code>supabase/schema.sql</code> in your Supabase SQL Editor.
+          </p>
+          <div className="flex flex-wrap gap-3 pt-2">
+            <button onClick={() => refreshProfile()} className="hm-btn-primary">Retry</button>
+            <button onClick={() => signOut()} className="hm-btn-secondary">Sign Out</button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="p-5 sm:p-8 max-w-6xl mx-auto space-y-8">

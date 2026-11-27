@@ -6,6 +6,7 @@ interface AuthCtx {
   session: Session | null;
   user: User | null;
   profile: Profile | null;
+  profileError: string | null;
   loading: boolean;
   isLeader: boolean;
   isAdmin: boolean;
@@ -14,43 +15,122 @@ interface AuthCtx {
 }
 
 const AuthContext = createContext<AuthCtx>({
-  session: null, user: null, profile: null, loading: true,
-  isLeader: false, isAdmin: false,
-  refreshProfile: async () => {}, signOut: async () => {}
+  session: null,
+  user: null,
+  profile: null,
+  profileError: null,
+  loading: true,
+  isLeader: false,
+  isAdmin: false,
+  refreshProfile: async () => {},
+  signOut: async () => {}
 });
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [session, setSession] = useState<Session | null>(null);
   const [profile, setProfile] = useState<Profile | null>(null);
+  const [profileError, setProfileError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchProfile = async (uid: string) => {
-    const { data } = await supabase.from('profiles').select('*').eq('id', uid).maybeSingle();
-    setProfile((data as Profile) || null);
+  const fetchProfile = async (authUser: User) => {
+    setProfileError(null);
+    const { data, error } = await supabase
+      .from('profiles')
+      .select('*')
+      .eq('id', authUser.id)
+      .maybeSingle();
+
+    if (error) {
+      setProfileError(error.message);
+      setProfile(null);
+      return;
+    }
+
+    if (data) {
+      setProfile(data as Profile);
+      return;
+    }
+
+    const meta = authUser.user_metadata || {};
+    const fallbackCode = meta.employee_code || `HMX-${new Date().getFullYear()}-${Math.floor(1000 + Math.random() * 9000)}`;
+    const { data: created, error: insertErr } = await supabase
+      .from('profiles')
+      .upsert({
+        id: authUser.id,
+        email: authUser.email || '',
+        full_name: meta.full_name || authUser.email?.split('@')[0] || 'HMorix User',
+        role: meta.role || 'employee',
+        designation: meta.designation || 'Team Member',
+        employee_code: fallbackCode,
+        status: 'active'
+      })
+      .select()
+      .maybeSingle();
+
+    if (insertErr) {
+      setProfileError(insertErr.message);
+      setProfile(null);
+    } else {
+      setProfile((created as Profile) || null);
+    }
   };
 
   useEffect(() => {
-    supabase.auth.getSession().then(({ data }) => {
+    let mounted = true;
+
+    supabase.auth.getSession().then(async ({ data }) => {
+      if (!mounted) return;
       setSession(data.session);
-      if (data.session?.user) fetchProfile(data.session.user.id).finally(() => setLoading(false));
-      else setLoading(false);
+      if (data.session?.user) {
+        await fetchProfile(data.session.user);
+      }
+      if (mounted) setLoading(false);
     });
-    const { data: sub } = supabase.auth.onAuthStateChange((_e, s) => {
+
+    const { data: sub } = supabase.auth.onAuthStateChange(async (_e, s) => {
+      if (!mounted) return;
       setSession(s);
-      if (s?.user) fetchProfile(s.user.id);
-      else setProfile(null);
+      if (s?.user) {
+        setLoading(true);
+        await fetchProfile(s.user);
+        if (mounted) setLoading(false);
+      } else {
+        setProfile(null);
+        setProfileError(null);
+        setLoading(false);
+      }
     });
-    return () => sub.subscription.unsubscribe();
+
+    return () => {
+      mounted = false;
+      sub.subscription.unsubscribe();
+    };
   }, []);
 
   return (
-    <AuthContext.Provider value={{
-      session, user: session?.user ?? null, profile, loading,
-      isLeader: ['admin', 'hr', 'team_leader'].includes(profile?.role || ''),
-      isAdmin: ['admin', 'hr'].includes(profile?.role || ''),
-      refreshProfile: async () => { if (session?.user) await fetchProfile(session.user.id); },
-      signOut: async () => { await supabase.auth.signOut(); setProfile(null); }
-    }}>
+    <AuthContext.Provider
+      value={{
+        session,
+        user: session?.user ?? null,
+        profile,
+        profileError,
+        loading,
+        isLeader: ['admin', 'hr', 'team_leader'].includes(profile?.role || ''),
+        isAdmin: ['admin', 'hr'].includes(profile?.role || ''),
+        refreshProfile: async () => {
+          if (session?.user) {
+            setLoading(true);
+            await fetchProfile(session.user);
+            setLoading(false);
+          }
+        },
+        signOut: async () => {
+          await supabase.auth.signOut();
+          setProfile(null);
+          setProfileError(null);
+        }
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

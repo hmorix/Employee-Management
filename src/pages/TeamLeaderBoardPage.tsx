@@ -34,7 +34,7 @@ export function TeamLeaderBoardPage() {
     Promise.all([
       supabase.from('teams').select('*').order('created_at', { ascending: false }),
       supabase.from('profiles').select('*').order('full_name'),
-      supabase.from('tasks').select('*, profiles(full_name, employee_code)')
+      supabase.from('tasks').select('*, profiles!assigned_to(full_name, employee_code)')
         .eq('assigned_by', profile.id)
         .order('created_at', { ascending: false }).limit(50),
     ]).then(([teamsRes, membersRes, tasksRes]) => {
@@ -49,12 +49,16 @@ export function TeamLeaderBoardPage() {
     e.preventDefault();
     if (!profile) return;
     setSavingTeam(true);
-    const { data } = await supabase.from('teams').insert({
+    const { data, error } = await supabase.from('teams').insert({
       name: teamName, department: teamDept, description: teamDesc,
       leader_id: profile.id, created_by: profile.id
     }).select().single();
-    setTeams((prev) => [data as Team, ...prev]);
     setSavingTeam(false);
+    if (error || !data) {
+      alert(error?.message || 'Failed to create team.');
+      return;
+    }
+    setTeams((prev) => [data as Team, ...prev]);
     setShowTeamForm(false);
     setTeamName(''); setTeamDept('Engineering'); setTeamDesc('');
   };
@@ -65,17 +69,21 @@ export function TeamLeaderBoardPage() {
     setSavingTask(true);
     const year = new Date().getFullYear();
     const taskCode = `HMX-TASK-${year}-${Math.floor(1000 + Math.random() * 9000)}`;
-    const { data } = await supabase.from('tasks').insert({
+    const { data, error } = await supabase.from('tasks').insert({
       task_code: taskCode, title: taskTitle, description: taskDesc,
       priority: taskPriority, due_date: taskDue || null,
-      estimated_hours: parseFloat(taskHours),
+      estimated_hours: parseFloat(taskHours) || 0,
       assigned_to: taskAssignTo || null,
       assigned_by: profile.id,
       team_id: taskTeam || null,
       status: 'todo'
-    }).select('*, profiles(full_name, employee_code)').single();
-    setTasks((prev) => [data as Task, ...prev]);
+    }).select('*, profiles!assigned_to(full_name, employee_code)').single();
     setSavingTask(false);
+    if (error || !data) {
+      alert(error?.message || 'Failed to create task.');
+      return;
+    }
+    setTasks((prev) => [data as Task, ...prev]);
     setShowTaskForm(false);
     setTaskTitle(''); setTaskDesc(''); setTaskPriority('medium'); setTaskDue(''); setTaskHours('4'); setTaskAssignTo(''); setTaskTeam('');
   };

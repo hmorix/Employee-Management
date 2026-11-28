@@ -28,7 +28,7 @@ export function TasksPage() {
 
   useEffect(() => {
     if (!profile) return;
-    supabase.from('tasks').select('*, profiles(full_name, avatar_url, employee_code)')
+    supabase.from('tasks').select('*, profiles!assigned_to(full_name, avatar_url, employee_code)')
       .eq('assigned_to', profile.id)
       .order('created_at', { ascending: false })
       .then(({ data }) => { setTasks((data as Task[]) || []); setLoading(false); });
@@ -69,7 +69,7 @@ export function TasksPage() {
     const { data } = await supabase.from('task_comments').insert({
       task_id: selected.id, author_id: profile.id, body: comment, attachment_url: attachUrl
     }).select('*, profiles(full_name, avatar_url)').single();
-    setComments((prev) => [...prev, data as TaskComment]);
+    if (data) setComments((prev) => [...prev, data as TaskComment]);
     setComment('');
     setCommentFile(null);
     setSubmittingComment(false);
